@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>South Bay Home Search · $1.8M Budget</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root {
+    --ocean: #1a3a5c;
+    --seafoam: #2d8fa5;
+    --sand: #f5efe6;
+    --dusk: #c9824a;
+    --white: #ffffff;
+    --text: #1c2b3a;
+    --muted: #6b8099;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--sand);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  header {
+    background: var(--ocean);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 1000;
+  }
+  .header-left h1 {
+    font-family: 'Playfair Display', serif;
+    color: white;
+    font-size: 1.4rem;
+  }
+  .header-left p {
+    color: #8bb4cc;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 2px;
+  }
+  .budget-badge {
+    background: var(--dusk);
+    color: white;
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+  .budget-badge b { font-family: 'Playfair Display', serif; font-size: 0.95rem; }
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  .sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    background: white;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.08);
+    z-index: 100;
+  }
+  .sidebar-header {
+    padding: 16px 18px 10px;
+    border-bottom: 1px solid #e8eef4;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+  }
+  .sidebar-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+    color: var(--ocean);
+  }
+  .sidebar-header p { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+  .ncard {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f0f4f8;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .ncard:hover { background: #f4fafd; border-left-color: var(--seafoam); }
+  .ncard.active { background: #eef7fa; border-left-color: var(--ocean); }
+  .ncard-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 5px;
+  }
+  .ncard-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    font-size: 0.88rem;
+    color: var(--ocean);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .ncard-zip {
+    font-size: 0.67rem;
+    background: #f0f4f8;
+    color: var(--muted);
+    padding: 2px 6px;
+    border-radius: 8px;
+  }
+  .ncard-desc { font-size: 0.72rem; color: var(--muted); line-height: 1.5; margin-bottom: 6px; }
+  .ncard-price { font-size: 0.73rem; color: var(--dusk); font-weight: 500; margin-bottom: 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 8px; }
+  .tag {
+    font-size: 0.64rem;
+    padding: 2px 7px;
+    border-radius: 8px;
+    background: #e4f3f8;
+    color: var(--seafoam);
+    font-weight: 500;
+  }
+  .zbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #006aff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .zbtn:hover { background: #0055cc; }
+  .legend {
+    padding: 12px 18px;
+    background: #f7fbff;
+    border-top: 1px solid #dde8f0;
+    font-size: 0.68rem;
+    color: var(--muted);
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+  .legend b { color: var(--ocean); }
+  #map { flex: 1; }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: #c5d8e8; border-radius: 2px; }
+  .pop-head { background: var(--ocean); color: white; padding: 10px 14px; }
+  .pop-head h3 { font-family: 'Playfair Display', serif; font-size: 0.95rem; }
+  .pop-head p { font-size: 0.68rem; color: #8bb4cc; margin-top: 1px; }
+  .pop-body { padding: 10px 14px; background: white; }
+  .pop-row { display: flex; justify-content: space-between; font-size: 0.72rem; margin-bottom: 4px; }
+  .pop-row span:first-child { color: var(--muted); }
+  .pop-row span:last-child { font-weight: 500; }
+  .pop-zillow {
+    display: block;
+    margin-top: 10px;
+    background: #006aff;
+    color: white;
+    text-align: center;
+    padding: 7px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 0.74rem;
+    font-weight: 500;
+  }
+  .pop-zillow:hover { background: #0055cc; }
+  .leaflet-popup-content-wrapper {
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  }
+  .leaflet-popup-content { margin: 0; min-width: 230px; }
+  .leaflet-popup-tip-container { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>South Bay Home Search</h1>
+    <p>Los Angeles &nbsp;·&nbsp; Beach Cities &amp; Palos Verdes</p>
+  </div>
+  <div class="budget-badge">Budget: <b>$1.8M</b> &nbsp;·&nbsp; 3bd / 2ba min</div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Neighborhoods</h2>
+      <p>Click a card or map pin to explore</p>
+    </div>
+    <div id="nlist"></div>
+    <div class="legend">
+      <b>Zillow filters applied:</b> Max $1.8M &nbsp;·&nbsp; 3+ beds &nbsp;·&nbsp; 2+ baths &nbsp;·&nbsp; Single Family
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script>
+var HOODS = [
+  {
+    name: "Hermosa Beach", zips: "90254",
+    lat: 33.8622, lng: -118.3995, color: "#2d8fa5",
+    desc: "Classic beach town with walkable pier village, volleyball culture, and tight-knit community.",
+    price: "$1.4M \u2013 $3.5M",
+    tags: ["Beach Access", "Walk Score 90+", "Top Schools"],
+    url: "https://www.zillow.com/hermosa-beach-ca/?searchQueryState=%7B%22filterState%22%3A%7B%22price%22%3A%7B%22max%22%3A1800000%7D%2C%22beds%22%3A%7B%22min%22%3A3%7D%2C%22baths%22%3A%7B%22min%22%3A2%7D%2C%22isSingleFamily%22%3A%7B%22value%22%3Atrue%7D%7D%7D"
+  },
+  {
+    name: "Redondo Beach North", zips: "90278",
+    lat: 33.8803, lng: -118.3715, color: "#1a6e85",
+    desc: "The flats \u2014 tree-lined streets, family-friendly tract homes, and the best value-per-sqft among the Beach Cities.",
+    price: "$1.1M \u2013 $1.8M",
+    tags: ["Family Friendly", "Great Value", "The Flats"],
+    url: "https://www.zillow.com/redondo-beach-ca-90278/?searchQueryState=%7B%22filterState%22%3A%7B%22price%22%3A%7B%22max%22%3A1800000%7D%2C%22beds%22%3A%7B%22min%22%3A3%7D%2C%22baths%22%3A%7B%22min%22%3A2%7D%2C%22isSingleFamily%22%3A%7B%22value%22%3Atrue%7D%7D%7D"
+  },
+  {
+    name: "Redondo Beach South", zips: "90277",
+    lat: 33.8386, lng: -118.3902, color: "#0e5a70",
+    desc: "Hollywood Riviera bluff, Riviera Village, King Harbor, and the Pier \u2014 ocean views and upscale coastal living.",
+    price: "$1.4M \u2013 $4M",
+    tags: ["Ocean Views", "Hollywood Riviera", "Pier Nearby"],
+    url: "https://www.zillow.com/redondo-beach-ca-90277/?searchQueryState=%7B%22filterState%22%3A%7B%22price%22%3A%7B%22max%22%3A1800000%7D%2C%22beds%22%3A%7B%22min%22%3A3%7D%2C%22baths%22%3A%7B%22min%22%3A2%7D%2C%22isSingleFamily%22%3A%7B%22value%22%3Atrue%7D%7D%7D"
+  },
+  {
+    name: "Torrance", zips: "90501\u201390505",
+    lat: 33.8369, lng: -118.3407, color: "#c9824a",
+    desc: "Spacious lots, excellent TUSD schools, and best value-per-sqft in the South Bay.",
+    price: "$900K \u2013 $2.2M",
+    tags: ["Best Value", "Top Schools", "Large Lots"],
+    url: "https://www.zillow.com/torrance-ca/?searchQueryState=%7B%22filterState%22%3A%7B%22price%22%3A%7B%22max%22%3A1800000%7D%2C%22beds%22%3A%7B%22min%22%3A3%7D%2C%22baths%22%3A%7B%22min%22%3A2%7D%2C%22isSingleFamily%22%3A%7B%22value%22%3Atrue%7D%7D%7D"
+  },
+  {
+    name: "Rancho Palos Verdes", zips: "90275",
+    lat: 33.7444, lng: -118.3870, color: "#4a7c59",
+    desc: "Dramatic bluff-top homes with panoramic Pacific and Catalina Island views.",
+    price: "$1.3M \u2013 $5M+",
+    tags: ["Ocean Views", "Catalina Views", "Prestige"],
+    url: "https://www.zillow.com/rancho-palos-verdes-ca/?searchQueryState=%7B%22filterState%22%3A%7B%22price%22%3A%7B%22max%22%3A1800000%7D%2C%22beds%22%3A%7B%22min%22%3A3%7D%2C%22baths%22%3A%7B%22min%22%3A2%7D%2C%22isSingleFamily%22%3A%7B%22value%22%3Atrue%7D%7D%7D"
+  },
+  {
+    name: "Rolling Hills", zips: "90274",
+    lat: 33.7756, lng: -118.3432, color: "#7a5c3a",
+    desc: "Ultra-exclusive gated community with equestrian trails and sprawling ranch estates.",
+    price: "$2.5M \u2013 $10M+",
+    tags: ["Gated", "Equestrian", "Ultra-Luxury"],
+    url: "https://www.zillow.com/rolling-hills-ca/?searchQueryState=%7B%22filterState%22%3A%7B%22price%22%3A%7B%22max%22%3A1800000%7D%2C%22beds%22%3A%7B%22min%22%3A3%7D%2C%22baths%22%3A%7B%22min%22%3A2%7D%2C%22isSingleFamily%22%3A%7B%22value%22%3Atrue%7D%7D%7D"
+  },
+  {
+    name: "Rolling Hills Estates", zips: "90274",
+    lat: 33.7878, lng: -118.3581, color: "#9b6b3c",
+    desc: "Horse trails, large yards and peninsula living at more accessible price points.",
+    price: "$1.5M \u2013 $4M",
+    tags: ["Horse Trails", "Large Yards", "Peninsula"],
+    url: "https://www.zillow.com/rolling-hills-estates-ca/?searchQueryState=%7B%22filterState%22%3A%7B%22price%22%3A%7B%22max%22%3A1800000%7D%2C%22beds%22%3A%7B%22min%22%3A3%7D%2C%22baths%22%3A%7B%22min%22%3A2%7D%2C%22isSingleFamily%22%3A%7B%22value%22%3Atrue%7D%7D%7D"
+  }
+];
+
+var markers = [];
+var map;
+
+function initMap() {
+  map = L.map('map').setView([33.80, -118.365], 12);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '\u00a9 OpenStreetMap \u00a9 CARTO',
+    maxZoom: 19
+  }).addTo(map);
+
+  var list = document.getElementById('nlist');
+
+  HOODS.forEach(function(h, i) {
+    // Sidebar card
+    var card = document.createElement('div');
+    card.className = 'ncard';
+    card.id = 'card' + i;
+    card.innerHTML =
+      '<div class="ncard-top">' +
+        '<div class="ncard-name">' +
+          '<span class="dot" style="background:' + h.color + '"></span>' + h.name +
+        '</div>' +
+        '<span class="ncard-zip">' + h.zips + '</span>' +
+      '</div>' +
+      '<p class="ncard-desc">' + h.desc + '</p>' +
+      '<div class="ncard-price">Typical: ' + h.price + '</div>' +
+      '<div class="tags">' + h.tags.map(function(t){ return '<span class="tag">' + t + '</span>'; }).join('') + '</div>' +
+      '<a class="zbtn" href="' + h.url + '" target="_blank" rel="noopener">&#x1F50D; View on Zillow</a>';
+
+    card.addEventListener('click', (function(idx) {
+      return function(e) {
+        if (e.target.tagName === 'A' || e.target.closest('a')) return;
+        flyTo(idx);
+      };
+    })(i));
+
+    list.appendChild(card);
+
+    // Map marker
+    var iconHtml = '<div style="' +
+      'width:26px;height:26px;' +
+      'border-radius:50% 50% 50% 0;' +
+      'background:' + h.color + ';' +
+      'border:3px solid white;' +
+      'box-shadow:0 2px 8px rgba(0,0,0,0.35);' +
+      'transform:rotate(-45deg)' +
+    '"></div>';
+
+    var icon = L.divIcon({
+      className: '',
+      html: iconHtml,
+      iconSize: [26, 26],
+      iconAnchor: [13, 26],
+      popupAnchor: [0, -30]
+    });
+
+    var popupHtml =
+      '<div class="pop-head">' +
+        '<h3>' + h.name + '</h3>' +
+        '<p>ZIP: ' + h.zips + '</p>' +
+      '</div>' +
+      '<div class="pop-body">' +
+        '<div class="pop-row"><span>Typical Range</span><span>' + h.price + '</span></div>' +
+        '<div class="pop-row"><span>Min Beds</span><span>3+</span></div>' +
+        '<div class="pop-row"><span>Min Baths</span><span>2+</span></div>' +
+        '<div class="pop-row"><span>Your Budget</span><span style="color:#2d8fa5">\u2264 $1,800,000</span></div>' +
+        '<a class="pop-zillow" href="' + h.url + '" target="_blank" rel="noopener">&#x1F50D; Search Zillow Listings</a>' +
+      '</div>';
+
+    var m = L.marker([h.lat, h.lng], { icon: icon }).addTo(map);
+    m.bindPopup(popupHtml, { maxWidth: 260 });
+    m.on('click', (function(idx) {
+      return function() { highlightCard(idx); };
+    })(i));
+
+    markers.push(m);
+  });
+}
+
+function highlightCard(i) {
+  document.querySelectorAll('.ncard').forEach(function(c) { c.classList.remove('active'); });
+  var card = document.getElementById('card' + i);
+  if (card) {
+    card.classList.add('active');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function flyTo(i) {
+  var h = HOODS[i];
+  map.setView([h.lat, h.lng], 14, { animate: true });
+  markers[i].openPopup();
+  highlightCard(i);
+}
+
+// Load Leaflet dynamically and call initMap once ready
+(function() {
+  var script = document.createElement('script');
+  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload = function() { initMap(); };
+  document.body.appendChild(script);
+})();
+</script>
+
+</body>
+</html>
